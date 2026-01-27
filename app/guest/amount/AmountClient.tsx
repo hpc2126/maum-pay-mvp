@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Side } from "@/lib/theme";
 
-const BLUE = "#275DBA";
+const GROOM_COLOR = "#275DBA"; // 신랑측 블루
+const BRIDE_COLOR = "#E56DA8"; // 신부측 핑크
 const YELLOW = "#F4C84B";
 
 function formatWon(n: number) {
@@ -28,6 +29,9 @@ export default function GuestAmountPage() {
 
   const side = (sp.get("side") as Side) || "groom";
   const hostCode = sp.get("hostCode") || "";
+
+  // ✅ 신랑/신부 색상 분기
+  const sideColor = side === "bride" ? BRIDE_COLOR : GROOM_COLOR;
 
   // MVP 기본값 (나중에 host 조회 붙이면 교체)
   const weddingDateText = sp.get("date") || "2025/12/20일(토)";
@@ -101,15 +105,14 @@ export default function GuestAmountPage() {
         <div className="text-2xl font-semibold tracking-tight text-[#7A7A7A]">
           {weddingDateText}
         </div>
-        <div className="mt-2 text-lg font-medium text-[#8A8A8A]">
-          {venueText}
-        </div>
+        <div className="mt-2 text-lg font-medium text-[#8A8A8A]">{venueText}</div>
 
         <div className="mt-5 h-px w-full bg-[#D3D3D3]" />
 
         {/* Target */}
         <div className="mt-6 text-3xl font-semibold leading-tight">
-          <span style={{ color: BLUE }}>
+          {/* ✅ 신부측이면 핑크, 신랑측이면 블루 */}
+          <span style={{ color: sideColor }}>
             {personName} {roleText}
           </span>
           <span className="font-medium text-[#8A8A8A]">님에게</span>
@@ -145,7 +148,8 @@ export default function GuestAmountPage() {
                 </button>
               </div>
 
-              <div className="mt-3 text-x1 font-medium text-[#8A8A8A]">
+              {/* (원본 오타 수정: text-x1 -> text-xl) */}
+              <div className="mt-3 text-xl font-medium text-[#8A8A8A]">
                 {formatShortKrw(amount)}
               </div>
 
