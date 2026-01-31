@@ -1,305 +1,191 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import type { Side } from "@/lib/theme";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Html5Qrcode } from "html5-qrcode";
 
-const YELLOW = "#FFD158";
-
-function formatWon(n: number) {
-  return n.toLocaleString("ko-KR") + "원";
-}
-
-type Pt = { x: number; y: number };
-
-export default function SenderClient() {
+export default function ScanClient() {
   const router = useRouter();
-  const sp = useSearchParams();
+  const [error, setError] = useState<string>("");
+  const [ready, setReady] = useState(false);
 
-  const side = (sp.get("side") as Side) || "groom";
-  const hostCode = sp.get("hostCode") || "";
-  const amount = Number(sp.get("amount") || "0");
+  const qrRef = useRef<Html5Qrcode | null>(null);
+  const navigatingRef = useRef(false);
 
-  const [senderName, setSenderName] = useState("");
-  const [relation, setRelation] = useState("");
-
-  const nameRef = useRef<HTMLInputElement | null>(null);
-  const relationRef = useRef<HTMLInputElement | null>(null);
-
-  // ✅ 라인 정렬용 ref
-  const stageRef = useRef<HTMLDivElement | null>(null);
-  const relationBoxRef = useRef<HTMLButtonElement | null>(null);
-  const firstQuickRef = useRef<HTMLButtonElement | null>(null);
-
-  const [p1, setP1] = useState<Pt | null>(null); // relation box right-middle
-  const [p2, setP2] = useState<Pt | null>(null); // elbow (x stays, y moves)
-  const [p3, setP3] = useState<Pt | null>(null); // quick button left-middle
-
-  const quickRelations = ["직장동료", "대학동기", "부 지인", "모 지인"] as const;
-
-  const canSubmit = useMemo(() => {
-    return Boolean(hostCode) && amount > 0 && senderName.trim().length > 0;
-  }, [hostCode, amount, senderName]);
-
-  const goComplete = () => {
-    if (!canSubmit) return;
-
-    const q = new URLSearchParams({
-      side,
-      hostCode,
-      amount: String(amount),
-      senderName: senderName.trim(),
-      relation: relation.trim(),
-    });
-
-    router.push(`/guest/complete?${q.toString()}`);
-  };
-
-  // ✅ 라인 좌표 계산 (요소 위치 기반)
   useEffect(() => {
-    const compute = () => {
-      if (!stageRef.current || !relationBoxRef.current || !firstQuickRef.current) return;
+    const id = "qr-reader";
+    const qr = new Html5Qrcode(id);
+    qrRef.current = qr;
 
-      const stage = stageRef.current.getBoundingClientRect();
-      const rel = relationBoxRef.current.getBoundingClientRect();
-      const quick = firstQuickRef.current.getBoundingClientRect();
+    const start = async () => {
+      try {
+        setError("");
+        setReady(false);
 
-      // 시작점: 소속관계 박스 오른쪽 중간
-      const start: Pt = {
-        x: rel.right - stage.left,
-        y: rel.top - stage.top + rel.height / 2,
-      };
+        // iOS/모바일 안정성
+        // (html5-qrcode 내부에서 video를 만들기 때문에, 컨테이너만 준비하면 됨)
 
-      // 끝점: 첫 퀵버튼 왼쪽 중간
-      const end: Pt = {
-        x: quick.left - stage.left,
-        y: quick.top - stage.top + quick.height / 2,
-      };
+        await qr.start(
+          { facingMode: "environment" },
+          {
+            fps: 12,
+            qrbox: { width: 240, height: 240 },
+            // disableFlip: true, // 필요하면 켜도 됨
+          },
+          async (decodedText) => {
+            if (navigatingRef.current) return;
 
-      // 엘보(두번째 스샷 느낌):
-      // 1) 시작점에서 오른쪽으로 조금 나간 x
-      // 2) 거기서 위/아래로 end.y까지 수직
-      const elbowX = start.x + 44; // "수평으로 나가는 길이" (필요하면 36~60 사이로 조절)
-      const elbow1: Pt = { x: elbowX, y: start.y };
-      const elbow2: Pt = { x: elbowX, y: end.y };
+            const raw = (decodedText || "").trim();
 
-      setP1(start);
-      // p2를 elbow2로 쓰고, 중간 elbow1은 path에서 직접 사용
-      setP2(elbow2);
-      setP3(end);
+            // 예식장 QR 전용: URL만 허용
+            const isUrl = /^https?:\/\//i.test(raw);
+            if (!isUrl) {
+              setError("예식장 QR이 아닙니다. (링크 QR만 인식)");
+              return;
+            }
 
-      // path에 elbow1도 필요해서, state 대신 아래 render에서 p1 기반으로 계산해도 되는데
-      // 단순화를 위해 elbowX는 고정, y만 2개 쓰는 구조로 유지
+            navigatingRef.current = true;
+
+            try {
+              await qr.stop();
+              await qr.clear();
+            } catch {}
+
+            router.push(raw);
+          },
+          // ✅ 4번째 콜백(에러 콜백) 꼭 넣어야 타입 에러 안 남
+          () => {
+            // 스캔 실패 이벤트(너무 잦아서 보통 무시)
+          }
+        );
+
+        setReady(true);
+
+        // ✅ html5-qrcode가 video + canvas를 같이 올리는데,
+        // canvas가 보이면 “카메라가 두 번 보이는 것처럼” 보일 수 있어서 숨김 처리
+        setTimeout(() => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const canvas = el.querySelector("canvas");
+          if (canvas) (canvas as HTMLCanvasElement).style.display = "none";
+        }, 0);
+      } catch (e: any) {
+        setError(e?.message || "카메라를 시작할 수 없습니다.");
+      }
     };
 
-    compute();
-    window.addEventListener("resize", compute);
-    return () => window.removeEventListener("resize", compute);
-  }, []);
+    start();
 
-  // relation/퀵 버튼 텍스트가 바뀌어도 높이는 같아서 보통 괜찮지만,
-  // 폰트 로딩/레이아웃 변경 시 다시 계산
-  useEffect(() => {
-    const t = setTimeout(() => {
-      const evt = new Event("resize");
-      window.dispatchEvent(evt);
-    }, 0);
-    return () => clearTimeout(t);
-  }, []);
+    return () => {
+      (async () => {
+        try {
+          await qr.stop();
+          await qr.clear();
+        } catch {}
+      })();
+    };
+  }, [router]);
 
   return (
-    <main className="mx-auto min-h-screen max-w-md bg-[#E9E9E9] px-6 pt-10 pb-10">
-      {/* Step indicator */}
-      <div className="flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#D6D6D6] text-sm font-semibold text-[#7A7A7A]">
-          1
-        </span>
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#D6D6D6] text-sm font-semibold text-[#7A7A7A]">
-          2
-        </span>
-        <span className="rounded-full px-4 py-1 text-sm font-semibold text-[#111]" style={{ backgroundColor: YELLOW }}>
-          Step3
-        </span>
+    <main className="relative mx-auto min-h-screen max-w-md bg-black">
+      {/* ✅ 카메라 영역(전체 화면) */}
+      <div className="absolute inset-0">
+        <div
+          id="qr-reader"
+          className="h-full w-full overflow-hidden bg-black"
+          style={{ position: "absolute", inset: 0 }}
+        />
       </div>
 
-      <section className="mt-10">
-        {/* 봉투 + 오버레이 무대 */}
-        <div className="relative w-full">
-          <div ref={stageRef} className="relative w-full aspect-[4/3]">
-            <img
-              src="/assets/envelope.svg"
-              alt="envelope"
-              draggable={false}
-              className="absolute inset-0 h-full w-full object-contain"
-              style={{
-                transform: "scale(1.45)",
-                transformOrigin: "center",
-              }}
-            />
+      {/* ✅ 어두운 오버레이 + 중앙 투명 창 */}
+      <div className="pointer-events-none absolute inset-0">
+        {/* 바깥 어둡게 */}
+        <div className="absolute inset-0 bg-black/55" />
 
-            {/* ===== 보내는사람 ===== */}
-            <button
-              type="button"
-              onClick={() => nameRef.current?.focus()}
-              className="absolute"
-              style={{
-                left: "10.8%",
-                top: "22%",
-                width: "16%",
-                height: "60%",
-              }}
-              aria-label="보내는사람 입력"
-            >
-              <div
-                className="h-full w-full rounded-[16px] bg-transparent"
-                style={{
-                  border: `3px solid ${YELLOW}`,
-                  boxShadow: "0 10px 22px rgba(0,0,0,0.12)",
-                }}
-              >
-                <input
-                  ref={nameRef}
-                  value={senderName}
-                  onChange={(e) => setSenderName(e.target.value)}
-                  placeholder="보내는사람"
-                  className="w-full bg-transparent font-extrabold text-[#111] outline-none placeholder:text-[#D6D6D6]"
-                  style={{
-                    writingMode: "vertical-rl",
-                    textOrientation: "upright",
-                    height: "100%",
-                    padding: "6px 0",
-                    textAlign: "center",
-                    letterSpacing: "0.01em",
-                    fontSize: "22px",
-                    lineHeight: "1.05",
-                  }}
-                  inputMode="text"
-                />
-              </div>
-            </button>
-
-            {/* ===== 소속관계 ===== */}
-            <button
-              ref={relationBoxRef}
-              type="button"
-              onClick={() => relationRef.current?.focus()}
-              className="absolute"
-              style={{
-                left: "29.8%",
-                top: "22%",
-                width: "14%",
-                height: "54%",
-              }}
-              aria-label="소속관계 입력"
-            >
-              <div
-                className="h-full w-full rounded-[16px] bg-transparent"
-                style={{
-                  border: "3px solid #CFCFCF",
-                  boxShadow: "0 10px 22px rgba(0,0,0,0.12)",
-                }}
-              >
-                <input
-                  ref={relationRef}
-                  value={relation}
-                  onChange={(e) => setRelation(e.target.value)}
-                  placeholder="소속관계"
-                  className="w-full bg-transparent font-extrabold text-[#B5B5B5] outline-none placeholder:text-[#D6D6D6]"
-                  style={{
-                    writingMode: "vertical-rl",
-                    textOrientation: "upright",
-                    height: "100%",
-                    padding: "6px 0",
-                    textAlign: "center",
-                    letterSpacing: "0.01em",
-                    fontSize: "18px",
-                    lineHeight: "1.05",
-                  }}
-                  inputMode="text"
-                />
-              </div>
-            </button>
-
-            {/* ===== 우측 퀵 선택 ===== */}
-            <div
-              className="absolute flex flex-col gap-3"
-              style={{
-                right: "8%",
-                top: "22%",
-                width: "28%",
-              }}
-            >
-              {quickRelations.map((r, idx) => (
-                <button
-                  key={r}
-                  ref={idx === 0 ? firstQuickRef : undefined}
-                  type="button"
-                  onClick={() => {
-                    setRelation(r);
-                    setTimeout(() => relationRef.current?.focus(), 0);
-                    // 선택 시 레이아웃 흔들림 대비 라인 재계산
-                    setTimeout(() => window.dispatchEvent(new Event("resize")), 0);
-                  }}
-                  className="h-[50px] w-full rounded-full bg-[#E6E6E6] text-[16px] font-semibold text-[#B5B5B5] active:opacity-70"
-                  style={{ boxShadow: "0 8px 18px rgba(0,0,0,0.06)" }}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-
-            {/* ✅ 라인(두번째 스샷처럼) */}
-            {p1 && p2 && p3 && (
-              <svg
-                className="absolute pointer-events-none"
-                style={{ inset: 0 }}
-                width="100%"
-                height="100%"
-                aria-hidden="true"
-              >
-                {(() => {
-                  const elbowX = p1.x + 44; // 위 compute와 동일
-                  const d = `M ${p1.x} ${p1.y} L ${elbowX} ${p1.y} L ${elbowX} ${p3.y} L ${p3.x} ${p3.y}`;
-                  return (
-                    <path
-                      d={d}
-                      fill="none"
-                      stroke="#BFBFBF"
-                      strokeWidth={1} // ✅ 얇고 일정
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  );
-                })()}
-              </svg>
-            )}
-          </div>
-        </div>
-
-        {/* 구분선 */}
-        <div className="mt-10 h-px w-full bg-[#D3D3D3]" />
-
-        {/* 안내 문구 2줄 */}
-        <div className="mt-6 text-center text-xs text-[#9A9A9A] leading-relaxed">
-          <div>성함은 축의 기록용으로만 사용됩니다.</div>
-          <div>
-            • 전할 금액: <span className="text-[#111]">{formatWon(amount)}</span>
-          </div>
-        </div>
-
-        {/* 마음 전하기 */}
-        <button
-          onClick={goComplete}
-          disabled={!canSubmit}
-          className="mt-4 h-16 w-full rounded-3xl text-xl font-bold text-[#111] active:opacity-80"
-          style={{
-            backgroundColor: YELLOW,
-            opacity: canSubmit ? 1 : 0.55,
-          }}
+        {/* 중앙 투명 창 */}
+        <div
+          className="absolute left-1/2 top-[120px] -translate-x-1/2"
+          style={{ width: 300, height: 360 }}
         >
-          마음 전하기
+          {/* 투명창 만들기: box-shadow로 뚫는 느낌 */}
+          <div
+            className="absolute inset-0 rounded-[28px]"
+            style={{
+              boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)",
+              background: "transparent",
+            }}
+          />
+
+          {/* ✅ 노란 프레임(하나만) */}
+          <div
+            className="absolute inset-0 rounded-[28px]"
+            style={{
+              border: "4px solid #FFD158",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* ✅ 상단 헤더 */}
+      <header className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between px-5 pt-10">
+        <img src="/assets/logo.svg" alt="MaumPay" className="h-7 w-auto" />
+        <button
+          type="button"
+          onClick={() => router.push("/")}
+          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full text-4xl leading-none text-white/90 active:opacity-60"
+          aria-label="close"
+        >
+          ×
         </button>
-      </section>
+      </header>
+
+      {/* ✅ 안내 텍스트 */}
+      <div className="absolute left-0 right-0 top-[520px] z-10 px-6 text-center text-white">
+        <div className="text-base font-semibold text-white/90">
+          신랑측 🤵 · 신부측 👰 확인 후
+        </div>
+        <div className="mt-2 text-4xl font-extrabold tracking-tight">
+          QR코드를 스캔하세요
+        </div>
+      </div>
+
+      {/* ✅ 하단 도움 카드 */}
+      <div className="absolute bottom-8 left-0 right-0 z-10 px-5">
+        <div className="rounded-[28px] bg-white/90 p-6 shadow-[0_18px_50px_rgba(0,0,0,0.25)] backdrop-blur">
+          <div className="text-2xl font-extrabold text-[#111]">
+            혹시 인식이 안 되나요?
+          </div>
+          <div className="mt-4 space-y-2 text-lg font-medium text-[#666]">
+            <div>• QR이 프레임 안에 들어오도록 맞춰주세요</div>
+            <div>• 반사/어두우면 각도를 바꿔보세요</div>
+          </div>
+
+          {!ready && (
+            <div className="mt-4 text-sm font-medium text-[#888]">
+              카메라 준비 중…
+            </div>
+          )}
+          {error && (
+            <div className="mt-3 text-sm font-semibold text-red-600">
+              {error}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ✅ html5-qrcode가 만든 video 스타일 보정 */}
+      <style jsx global>{`
+        #qr-reader video {
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: cover !important;
+        }
+        /* 캔버스가 보이면 “카메라 두 개”처럼 보일 수 있어서 숨김 */
+        #qr-reader canvas,
+        #qr-reader img {
+          display: none !important;
+        }
+      `}</style>
     </main>
   );
 }
