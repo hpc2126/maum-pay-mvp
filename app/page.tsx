@@ -54,25 +54,15 @@ export default function MainPage() {
             }}
           >
             {/* 로고 + 식권 */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <img
-                src="/assets/maumpay-logo.svg"
-                alt="MaumPay"
-                style={{
-                  height: 22,
-                  width: "auto",
-                  display: "block",
-                }}
-                draggable={false}
-              />
-              <TicketTag />
-            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+  <img
+    src="/assets/maumpay-logo.svg"
+    alt="MaumPay"
+    style={{ height: 22, width: "auto", display: "block" }}
+    draggable={false}
+  />
+  <TicketTag />
+</div>
 
             {/* 금액 + > */}
             <div
