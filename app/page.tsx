@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import LiquidTabBar from "@/components/LiquidTabBar";
 
 const BG = "#E9E9E9";
 
@@ -9,191 +10,72 @@ function formatWon(n: number) {
   return n.toLocaleString("ko-KR") + "원";
 }
 
-function TabIcon({
-  name,
-  active,
-}: {
-  name: "home" | "note" | "mail" | "bag" | "user";
-  active?: boolean;
-}) {
-  const stroke = active ? "#111" : "rgba(0,0,0,0.45)";
-  const fill = "none";
-  const size = 20;
-
-  switch (name) {
-    case "home":
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}>
-          <path d="M3 11.5L12 4l9 7.5" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M6.5 10.5V20h11V10.5" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      );
-    case "note":
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}>
-          <path d="M7 3h10a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke={stroke} strokeWidth="2" strokeLinejoin="round" />
-          <path d="M9 8h8M9 12h8M9 16h6" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
-        </svg>
-      );
-    case "mail":
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}>
-          <path d="M4 6h16v12H4z" stroke={stroke} strokeWidth="2" strokeLinejoin="round" />
-          <path d="M4.5 6.5 12 12l7.5-5.5" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      );
-    case "bag":
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}>
-          <path d="M6 8h12l-1 13H7L6 8Z" stroke={stroke} strokeWidth="2" strokeLinejoin="round" />
-          <path d="M9 8a3 3 0 0 1 6 0" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
-        </svg>
-      );
-    case "user":
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}>
-          <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke={stroke} strokeWidth="2" strokeLinejoin="round" />
-          <path d="M4 20c1.7-3.2 5-5 8-5s6.3 1.8 8 5" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
-        </svg>
-      );
-  }
-}
-
-function LiquidTabBar({
-  active,
-  onChange,
-}: {
-  active: number;
-  onChange: (idx: number) => void;
-}) {
-  const tabs = useMemo(
-    () => [
-      { key: "home", label: "홈", icon: "home" as const },
-      { key: "ledger", label: "장부", icon: "note" as const },
-      { key: "invitation", label: "청첩장", icon: "mail" as const },
-      { key: "store", label: "스토어", icon: "bag" as const },
-      { key: "my", label: "MY", icon: "user" as const },
-    ],
-    []
-  );
-
-  const shellRef = useRef<HTMLDivElement | null>(null);
-  const btnRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
-
-  const measure = () => {
-    const shell = shellRef.current;
-    const btn = btnRefs.current[active];
-    if (!shell || !btn) return;
-
-    const s = shell.getBoundingClientRect();
-    const b = btn.getBoundingClientRect();
-
-    const innerW = Math.max(78, Math.min(110, b.width * 0.78));
-    const center = b.left - s.left + b.width / 2;
-
-    setPill({ left: center, width: innerW });
-  };
-
-  useLayoutEffect(() => {
-    measure();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active]);
-
-  useEffect(() => {
-    const onResize = () => measure();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active]);
+/**
+ * ✅ 식권 태그 (인라인 SVG + 텍스트 overlay)
+ * - iOS에서 SVG img가 흐려지는 케이스 회피
+ * - filter(그림자) 제거해서 또렷하게
+ * - 요청대로 1.5배 크기 (기본 57x36 → 86x54)
+ */
+function TicketTag() {
+  const W = 86; // 57 * 1.5
+  const H = 54; // 36 * 1.5
 
   return (
-    <div className="fixed left-0 right-0 bottom-0 z-50 flex justify-center">
-      <div
-        className="w-full max-w-md px-5"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
+    <div
+      className="relative select-none"
+      style={{
+        width: W,
+        height: H,
+        transformOrigin: "center",
+        animation: "ticketPop 520ms cubic-bezier(.2,.9,.2,1) 1",
+      }}
+      aria-label="식권"
+    >
+      {/* SVG (필터 제거 버전) */}
+      <svg
+        width={W}
+        height={H}
+        viewBox="0 0 57 36"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        style={{ display: "block" }}
       >
-        <div className="relative">
-          <div
-            ref={shellRef}
-            className="relative overflow-hidden rounded-[30.5px]"
-            style={{
-              height: 61,
-              background: "rgba(255,255,255,0.20)",
-              backdropFilter: "blur(18px)",
-              WebkitBackdropFilter: "blur(18px)",
-              boxShadow: "0 2px 20px rgba(0,0,0,0.10)",
-            }}
-          >
-            <div
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.08) 100%)",
-                opacity: 0.35,
-              }}
-            />
-            <div
-              className="pointer-events-none absolute inset-0"
-              style={{
-                border: "1px solid rgba(255,255,255,0.35)",
-                borderRadius: 30.5,
-              }}
-            />
+        <path
+          d="M3 3H52V12C47.5556 13.8519 47.5556 20.1481 52 22V31H3V22C7.44444 20.1481 7.44444 13.8519 3 12V3Z"
+          fill="#FFD158"
+        />
+      </svg>
 
-            {pill && (
-              <div
-                className="pointer-events-none absolute top-[4px] rounded-[26.5px] transition-[left,width] duration-200 ease-out"
-                style={{
-                  left: pill.left,
-                  width: pill.width,
-                  height: 53,
-                  transform: "translateX(-50%)",
-                  background: "#EDEDED",
-                  boxShadow: "0 6px 14px rgba(0,0,0,0.08)",
-                }}
-              />
-            )}
-
-            <div className="relative h-full px-[14px]">
-              <div className="grid h-full grid-cols-5">
-                {tabs.map((t, idx) => {
-                  const isActive = idx === active;
-                  return (
-                    <button
-                      key={t.key}
-                      ref={(el) => {
-                        btnRefs.current[idx] = el;
-                      }}
-                      type="button"
-                      onClick={() => onChange(idx)}
-                      className="relative flex flex-col items-center justify-center gap-[4px] active:opacity-70 focus:outline-none"
-                      style={{ paddingTop: 2, WebkitTapHighlightColor: "transparent" }}
-                    >
-                      <TabIcon name={t.icon} active={isActive} />
-                      <span
-                        className="text-[12px] font-semibold"
-                        style={{
-                          color: isActive ? "#111" : "rgba(0,0,0,0.55)",
-                          letterSpacing: "-0.01em",
-                          lineHeight: 1,
-                        }}
-                      >
-                        {t.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="pointer-events-none absolute -inset-x-2 -inset-y-2 rounded-[34px]"
-            style={{ boxShadow: "0 16px 34px rgba(0,0,0,0.10)", opacity: 0.55 }}
-          />
-        </div>
+      {/* 텍스트를 '티켓 안'에 정확히 */}
+      <div
+        className="absolute inset-0 flex items-center justify-center"
+        style={{
+          fontSize: 14,
+          fontWeight: 800,
+          color: "#6B5600",
+          letterSpacing: "-0.02em",
+        }}
+      >
+        식권
       </div>
+
+      {/* subtle 발급 느낌: 좌우로 흔들지 말고 '가볍게 팝'만 */}
+      <style jsx>{`
+        @keyframes ticketPop {
+          0% {
+            transform: scale(0.92);
+            opacity: 0;
+          }
+          60% {
+            transform: scale(1.03);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -226,95 +108,134 @@ export default function MainPage() {
         paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 110px)",
       }}
     >
+      {/* 상단 여백: status bar랑 너무 멀지 않게 */}
       <div className="px-5 pt-6">
-        {/* 노란 메인카드 */}
+        {/* ✅ 노란 메인카드 */}
         <section>
           <div
             className="rounded-[20px]"
             style={{
+              width: "100%",
               background:
-                "linear-gradient(0deg, #FFD158, #FFD158), linear-gradient(360deg, rgba(255,255,255,0.30) 53.3%, rgba(255,255,255,0.70) 100%)",
+                "linear-gradient(0deg, #FFD158, #FFD158), linear-gradient(360deg, rgba(255, 255, 255, 0.3) 53.3%, rgba(255, 255, 255, 0.7) 100%)",
               backdropFilter: "blur(2px)",
               WebkitBackdropFilter: "blur(2px)",
-              width: "100%",
-              height: 199,
-              padding: 16,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
+              padding: 18,
             }}
           >
-            {/* 상단: 로고 + 식권 */}
-            <div className="flex items-start justify-between">
-              {/* ✅ 여기 로고: 반드시 이 경로 */}
+            {/* 상단 라인: 로고/식권 상단 패딩 ‘같게’ 맞춤 (items-center + 같은 라인 높이) */}
+            <div
+              className="flex items-center justify-between"
+              style={{ height: 54 }} // TicketTag(54px)와 맞춰서 정렬 안정화
+            >
               <img
                 src="/assets/maumpay-logo.svg"
                 alt="MaumPay"
-                className="block"
-                style={{ height: 18, width: "auto" }}
-                draggable={false}
+                style={{
+                  height: 18, // 로고 1.3배 줄인 느낌 유지
+                  width: "auto",
+                  display: "block",
+                }}
               />
 
-              {/* ✅ 식권: ticket.svg 사용 + 텍스트는 SVG 안에 없으니 옆에 */}
-              <div className="flex items-center gap-6">
-                <img
-                  src="/assets/ticket.svg"
-                  alt="식권"
-                  className="block"
-                  style={{ height: 22, width: "auto" }}
-                  draggable={false}
-                />
-              </div>
+              <TicketTag />
             </div>
 
-            {/* 금액 */}
-            <div className="flex items-center justify-end gap-2">
-              <div className="text-[28px] font-extrabold text-[#222]">
+            {/* 금액 + > */}
+            <div className="mt-2 flex items-center justify-end">
+              <div
+                style={{
+                  fontSize: 34,
+                  fontWeight: 900,
+                  color: "#2F2F2F",
+                  letterSpacing: "-0.02em",
+                }}
+              >
                 {formatWon(balance)}
               </div>
+
+              {/* 간격 너무 벌어지지 않게 */}
               <img
                 src="/assets/chevron-right.svg"
                 alt=">"
-                className="block"
-                style={{ height: 18, width: 18, opacity: 0.65 }}
-                draggable={false}
+                style={{
+                  width: 18,
+                  height: 18,
+                  marginLeft: 8,
+                  opacity: 0.7,
+                }}
               />
             </div>
 
             {/* 충전 | 송금 */}
-            <div className="flex items-center gap-4 text-[14px] font-semibold text-[#7A7A7A]">
-              <button type="button" className="active:opacity-70">충전</button>
-              <span className="text-[#BDBDBD]">|</span>
-              <button type="button" className="active:opacity-70">송금</button>
-            </div>
-
-            {/* 마음 전하기 버튼 */}
-            <button
-              type="button"
-              onClick={() => router.push("/scan")}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-[14px] font-bold text-[#111] active:opacity-80"
+            <div
+              className="mt-3 flex items-center"
               style={{
-                height: 55,
-                background: "#FFDC82",
-                border: "2px solid #FFE08E",
+                gap: 18,
+                fontSize: 14, // 아주 살짝 키움
+                fontWeight: 700,
+                color: "rgba(0,0,0,0.45)",
               }}
             >
-              <img
-                src="/assets/send-heart.svg"
-                alt=""
-                className="block"
-                style={{ height: 18, width: 18 }}
-                draggable={false}
-              />
-              마음 전하기
-            </button>
+              <button type="button" className="active:opacity-70">
+                충전
+              </button>
+              <span style={{ color: "rgba(0,0,0,0.25)" }}>|</span>
+              <button type="button" className="active:opacity-70">
+                송금
+              </button>
+            </div>
+
+            {/* 마음 전하기 버튼 (카드 안쪽에 고정) */}
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => router.push("/scan")}
+                className="w-full active:opacity-80"
+                style={{
+                  height: 55,
+                  borderRadius: 14,
+                  background: "#FFDC82",
+                  border: "2px solid #FFE08E",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                  fontSize: 18,
+                  fontWeight: 900,
+                  color: "#1B1B1B",
+                }}
+              >
+                <img
+                  src="/assets/send-heart.svg"
+                  alt=""
+                  aria-hidden="true"
+                  style={{ width: 22, height: 22 }}
+                />
+                마음 전하기
+              </button>
+            </div>
           </div>
         </section>
 
-        {/* 광고 배너 (흰 카드만) */}
+        {/* ✅ 배너: “흰색 카드 1겹”만 */}
         <section className="mt-5">
-          <div className="relative rounded-[22px] bg-white px-5 py-10 shadow-[0_18px_50px_rgba(0,0,0,0.08)]">
-            <div className="absolute bottom-4 right-5 text-sm font-semibold text-[#9A9A9A]">
+          <div
+            className="relative rounded-[22px]"
+            style={{
+              background: "#fff",
+              height: 92, // 조금 낮춘 상태
+              boxShadow: "0 18px 50px rgba(0,0,0,0.10)",
+            }}
+          >
+            <div
+              className="absolute right-5 bottom-4"
+              style={{
+                fontSize: 16,
+                fontWeight: 800,
+                color: "rgba(0,0,0,0.35)",
+              }}
+            >
               1/10
             </div>
           </div>
@@ -322,16 +243,34 @@ export default function MainPage() {
 
         {/* 아이콘 그리드 */}
         <section className="mt-5">
-          <div className="rounded-[22px] bg-white p-5 shadow-[0_18px_50px_rgba(0,0,0,0.10)]">
+          <div
+            className="rounded-[22px] bg-white p-5"
+            style={{ boxShadow: "0 18px 50px rgba(0,0,0,0.10)" }}
+          >
             <div className="grid grid-cols-4 gap-x-6 gap-y-6">
               {shortcuts.map((label) => (
                 <button
                   key={label}
                   type="button"
-                  className="flex flex-col items-center gap-2 active:opacity-70 focus:outline-none"
+                  className="flex flex-col items-center gap-2 active:opacity-70 focus:outline-none focus-visible:outline-none"
                 >
-                  <div className="h-12 w-12 rounded-xl bg-[#D9D9D9]" />
-                  <div className="text-xs font-semibold text-[#7A7A7A]">
+                  <div
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 16,
+                      background: "#D9D9D9",
+                    }}
+                  />
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: "rgba(0,0,0,0.50)",
+                      letterSpacing: "-0.02em",
+                      textAlign: "center",
+                    }}
+                  >
                     {label}
                   </div>
                 </button>
