@@ -1,217 +1,294 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const BG = "#E9E9E9";
-
-/**
- * ✅ Figma 기준(375 아트보드)
- * padding: 14px * 2 = 28px
- * content width: 375 - 28 = 347px
- */
-const ARTBOARD_W = 375;
-const SIDE_PADDING = 14;
-const CONTENT_W = ARTBOARD_W - SIDE_PADDING * 2; // 347
 
 function formatWon(n: number) {
   return n.toLocaleString("ko-KR") + "원";
 }
 
-// ====== 임시 아이콘 (외부 라이브러리 X) ======
-function Icon({
-  name,
-  active,
-}: {
-  name: "home" | "ledger" | "invitation" | "store" | "my";
-  active?: boolean;
-}) {
-  const stroke = active ? "#111" : "rgba(0,0,0,0.45)";
+/** ✅ 식권 SVG path (그림자/테두리 없음) */
+function TicketSvg({ height = 30 }: { height?: number }) {
+  const w = (57 / 36) * height;
+  const d =
+    "M3 3H52V12C47.5556 13.8519 47.5556 20.1481 52 22V31H3V22C7.44444 20.1481 7.44444 13.8519 3 12V3Z";
 
-  switch (name) {
-    case "home":
-      return (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="block">
-          <path
-            d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10.5z"
-            stroke={stroke}
-            strokeWidth="1.8"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-    case "ledger":
-      return (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="block">
-          <path
-            d="M7 3h10a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"
-            stroke={stroke}
-            strokeWidth="1.8"
-            strokeLinejoin="round"
-          />
-          <path d="M9 8h8M9 12h8M9 16h6" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
-      );
-    case "invitation":
-      return (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="block">
-          <path d="M4 7h16v12H4V7z" stroke={stroke} strokeWidth="1.8" strokeLinejoin="round" />
-          <path
-            d="M4.5 7.5L12 13l7.5-5.5"
-            stroke={stroke}
-            strokeWidth="1.8"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-    case "store":
-      return (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="block">
-          <path d="M6 8l1-4h10l1 4" stroke={stroke} strokeWidth="1.8" strokeLinejoin="round" />
-          <path d="M6 8v12h12V8" stroke={stroke} strokeWidth="1.8" strokeLinejoin="round" />
-          <path d="M9 12h6" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
-      );
-    case "my":
-      return (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="block">
-          <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4z" stroke={stroke} strokeWidth="1.8" />
-          <path
-            d="M4 21a8 8 0 0 1 16 0"
-            stroke={stroke}
-            strokeWidth="1.8"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    default:
-      return null;
-  }
-}
-
-// ====== 하단바 배경 SVG(너가 준 402x103) ======
-function BottomNavSvg() {
   return (
-    <svg viewBox="0 0 402 103" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" className="block">
-      <g filter="url(#filter0_d_72_172)">
-        <rect x="24" y="18" width="354" height="61" rx="30.5" fill="white" fillOpacity="0.2" shapeRendering="crispEdges" />
-      </g>
-      <defs>
-        <filter
-          id="filter0_d_72_172"
-          x="4"
-          y="0"
-          width="394"
-          height="101"
-          filterUnits="userSpaceOnUse"
-          colorInterpolationFilters="sRGB"
-        >
-          <feFlood floodOpacity="0" result="BackgroundImageFix" />
-          <feColorMatrix
-            in="SourceAlpha"
-            type="matrix"
-            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
-            result="hardAlpha"
-          />
-          <feOffset dy="2" />
-          <feGaussianBlur stdDeviation="10" />
-          <feComposite in2="hardAlpha" operator="out" />
-          <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.1 0" />
-          <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_72_172" />
-          <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_72_172" result="shape" />
-        </filter>
-      </defs>
+    <svg
+      width={w}
+      height={height}
+      viewBox="0 0 57 36"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ display: "block" }}
+      aria-hidden
+    >
+      <path d={d} fill="#F7F3EA" />
     </svg>
   );
 }
 
-function LiquidBottomNav({
+/** ✅ "식권" 태그: 텍스트를 티켓 안에 올림 + 미세 인터랙션 */
+function TicketTag({ height = 30 }: { height?: number }) {
+  const w = (57 / 36) * height;
+
+  return (
+    <div
+      className="ticket-issued relative"
+      style={{
+        width: w,
+        height,
+      }}
+      aria-label="식권"
+    >
+      <TicketSvg height={height} />
+      {/* 텍스트는 티켓 중앙 */}
+      <div
+        className="absolute inset-0 flex items-center justify-center"
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          color: "#111",
+          letterSpacing: "-0.02em",
+        }}
+      >
+        식권
+      </div>
+
+      {/* 살짝 발급 느낌(샤인) */}
+      <span className="ticket-shimmer pointer-events-none absolute inset-0 rounded-[999px]" />
+    </div>
+  );
+}
+
+/** 하단 탭 아이콘(임시) */
+function TabIcon({
+  name,
+  active,
+}: {
+  name: "home" | "note" | "mail" | "bag" | "user";
+  active?: boolean;
+}) {
+  const stroke = active ? "#111" : "rgba(0,0,0,0.45)";
+  const fill = "none";
+  const size = 20;
+
+  switch (name) {
+    case "home":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} aria-hidden>
+          <path
+            d="M3 11.5L12 4l9 7.5"
+            stroke={stroke}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M6.5 10.5V20h11V10.5"
+            stroke={stroke}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    case "note":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} aria-hidden>
+          <path
+            d="M7 3h10a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
+            stroke={stroke}
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M9 8h8M9 12h8M9 16h6"
+            stroke={stroke}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
+    case "mail":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} aria-hidden>
+          <path d="M4 6h16v12H4z" stroke={stroke} strokeWidth="2" strokeLinejoin="round" />
+          <path
+            d="M4.5 6.5 12 12l7.5-5.5"
+            stroke={stroke}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    case "bag":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} aria-hidden>
+          <path d="M6 8h12l-1 13H7L6 8Z" stroke={stroke} strokeWidth="2" strokeLinejoin="round" />
+          <path d="M9 8a3 3 0 0 1 6 0" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+    case "user":
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} aria-hidden>
+          <path
+            d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"
+            stroke={stroke}
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M4 20c1.7-3.2 5-5 8-5s6.3 1.8 8 5"
+            stroke={stroke}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
+  }
+}
+
+/** ✅ LiquidTabBar (유지) */
+function LiquidTabBar({
   active,
   onChange,
 }: {
-  active: number; // 0..4
+  active: number;
   onChange: (idx: number) => void;
 }) {
-  // SVG 기준
-  const SVG_W = 402;
-  const SVG_H = 103;
+  const tabs = useMemo(
+    () => [
+      { key: "home", label: "홈", icon: "home" as const },
+      { key: "ledger", label: "장부", icon: "note" as const },
+      { key: "invitation", label: "청첩장", icon: "mail" as const },
+      { key: "store", label: "스토어", icon: "bag" as const },
+      { key: "my", label: "MY", icon: "user" as const },
+    ],
+    []
+  );
 
-  // inner glass rect: x=24 y=18 w=354 h=61
-  const innerX = 24;
-  const innerY = 18;
-  const innerW = 354;
-  const innerH = 61;
+  const shellRef = useRef<HTMLDivElement | null>(null);
+  const btnRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
 
-  const tabCount = 5;
-  const pillW = innerW / tabCount;
+  const measure = () => {
+    const shell = shellRef.current;
+    const btn = btnRefs.current[active];
+    if (!shell || !btn) return;
 
-  const pillLeftPct = ((innerX + active * pillW) / SVG_W) * 100;
-  const pillTopPct = (innerY / SVG_H) * 100;
-  const pillWidthPct = (pillW / SVG_W) * 100;
-  const pillHeightPct = (innerH / SVG_H) * 100;
+    const s = shell.getBoundingClientRect();
+    const b = btn.getBoundingClientRect();
 
-  const tabs = [
-    { label: "홈", icon: "home" as const },
-    { label: "장부", icon: "ledger" as const },
-    { label: "청첩장", icon: "invitation" as const },
-    { label: "스토어", icon: "store" as const },
-    { label: "MY", icon: "my" as const },
-  ] as const;
+    const innerW = Math.max(78, Math.min(110, b.width * 0.78));
+    const center = b.left - s.left + b.width / 2;
+
+    setPill({ left: center, width: innerW });
+  };
+
+  useLayoutEffect(() => {
+    measure();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
+
+  useEffect(() => {
+    const onResize = () => measure();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
 
   return (
-    // ✅ 여기! 하단바는 카드 폭(347)과 동일하게 고정
-    <div className="relative mx-auto w-full" style={{ maxWidth: CONTENT_W, height: 103 }}>
-      <div className="absolute inset-0">
-        <BottomNavSvg />
-      </div>
-
-      {/* pill */}
+    <div className="fixed left-0 right-0 bottom-0 z-50 flex justify-center">
       <div
-        className="absolute"
+        className="w-full max-w-md px-5"
         style={{
-          left: `${pillLeftPct}%`,
-          top: `${pillTopPct}%`,
-          width: `${pillWidthPct}%`,
-          height: `${pillHeightPct}%`,
-          borderRadius: 9999,
-          background: "#EDEDED",
-        }}
-      />
-
-      {/* clickable region */}
-      <div
-        className="absolute"
-        style={{
-          left: `${(innerX / SVG_W) * 100}%`,
-          top: `${(innerY / SVG_H) * 100}%`,
-          width: `${(innerW / SVG_W) * 100}%`,
-          height: `${(innerH / SVG_H) * 100}%`,
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
         }}
       >
-        <div className="grid h-full w-full grid-cols-5">
-          {tabs.map((t, idx) => {
-            const isActive = idx === active;
-            return (
-              <button
-                key={t.label}
-                type="button"
-                onClick={() => onChange(idx)}
-                className="flex h-full w-full flex-col items-center justify-center gap-[4px] active:opacity-70"
-                style={{ paddingTop: 2 }}
-              >
-                <Icon name={t.icon} active={isActive} />
-                <div
-                  className="text-[12px] font-semibold"
-                  style={{
-                    color: isActive ? "#111" : "rgba(0,0,0,0.55)",
-                    lineHeight: "12px",
-                  }}
-                >
-                  {t.label}
-                </div>
-              </button>
-            );
-          })}
+        <div className="relative">
+          <div
+            ref={shellRef}
+            className="relative overflow-hidden rounded-[30.5px]"
+            style={{
+              height: 61,
+              background: "rgba(255,255,255,0.20)",
+              backdropFilter: "blur(18px)",
+              WebkitBackdropFilter: "blur(18px)",
+              boxShadow: "0 2px 20px rgba(0,0,0,0.10)",
+            }}
+          >
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.08) 100%)",
+                opacity: 0.35,
+              }}
+            />
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                border: "1px solid rgba(255,255,255,0.35)",
+                borderRadius: 30.5,
+              }}
+            />
+
+            {pill && (
+              <div
+                className="pointer-events-none absolute top-[4px] rounded-[26.5px] transition-[left,width] duration-200 ease-out"
+                style={{
+                  left: pill.left,
+                  width: pill.width,
+                  height: 53,
+                  transform: "translateX(-50%)",
+                  background: "#EDEDED",
+                  boxShadow: "0 6px 14px rgba(0,0,0,0.08)",
+                }}
+              />
+            )}
+
+            <div className="relative h-full px-[14px]">
+              <div className="grid h-full grid-cols-5">
+                {tabs.map((t, idx) => {
+                  const isActive = idx === active;
+                  return (
+                    <button
+                      key={t.key}
+                      ref={(el) => {
+                        btnRefs.current[idx] = el;
+                      }}
+                      type="button"
+                      onClick={() => onChange(idx)}
+                      className="relative flex flex-col items-center justify-center gap-[4px] active:opacity-70 focus:outline-none focus-visible:outline-none"
+                      style={{ paddingTop: 2, WebkitTapHighlightColor: "transparent" }}
+                      aria-label={t.label}
+                    >
+                      <TabIcon name={t.icon} active={isActive} />
+                      <span
+                        className="text-[12px] font-semibold"
+                        style={{
+                          color: isActive ? "#111" : "rgba(0,0,0,0.55)",
+                          letterSpacing: "-0.01em",
+                          lineHeight: 1,
+                        }}
+                      >
+                        {t.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div
+            className="pointer-events-none absolute -inset-x-2 -inset-y-2 rounded-[34px]"
+            style={{ boxShadow: "0 16px 34px rgba(0,0,0,0.10)", opacity: 0.55 }}
+          />
         </div>
       </div>
     </div>
@@ -220,129 +297,204 @@ function LiquidBottomNav({
 
 export default function MainPage() {
   const router = useRouter();
-  const balance = 300_000;
   const [activeTab, setActiveTab] = useState(0);
 
+  const balance = 300_000;
+
   const shortcuts = useMemo(
-    () => ["웨딩 신청", "웨딩홀 예약", "스태프 특가", "상견례", "가전 혼수", "예물 예단", "다이어트", "신혼 여행"],
+    () => [
+      "웨딩 신청",
+      "웨딩홀 예약",
+      "스태프 특가",
+      "상견례",
+      "가전 혼수",
+      "예물 예단",
+      "다이어트",
+      "신혼 여행",
+    ],
     []
   );
 
   return (
-    <main className="min-h-screen w-full" style={{ background: BG }}>
-      {/* ✅ 컨테이너는 “가로 375 기준”으로만 잡고, 안쪽 콘텐츠는 347로 통일 */}
-      <div className="mx-auto w-full" style={{ maxWidth: ARTBOARD_W, paddingLeft: SIDE_PADDING, paddingRight: SIDE_PADDING }}>
-        <div style={{ paddingTop: 54, paddingBottom: 26 }}>
-          {/* ===== 노란 메인 카드 (너가 준 CSS 기준) ===== */}
-          <section
-            className="relative mx-auto"
+    <main
+      className="mx-auto min-h-screen max-w-md"
+      style={{
+        background: BG,
+        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 110px)",
+      }}
+    >
+      <div className="px-5 pt-6">
+        {/* ✅ 노란 메인 카드 */}
+        <section>
+          <div
+            className="rounded-[20px] p-5"
             style={{
-              width: CONTENT_W, // ✅ 347 고정
-              height: 199,
+              width: "100%",
               background:
-                "linear-gradient(0deg, #FFD158, #FFD158), linear-gradient(360deg, rgba(255, 255, 255, 0.3) 53.3%, rgba(255, 255, 255, 0.7) 100%)",
+                "linear-gradient(0deg, #FFD158, #FFD158), linear-gradient(360deg, rgba(255,255,255,0.3) 53.3%, rgba(255,255,255,0.7) 100%)",
               backdropFilter: "blur(2px)",
-              borderRadius: 20,
+              WebkitBackdropFilter: "blur(2px)",
             }}
           >
-            {/* ✅ 로고: 새 파일 사용 */}
-            <div className="absolute left-5 top-5">
-              <img src="/assets/maumpay-logo.svg" alt="MaumPay" className="h-6 w-auto" />
+            {/* 상단: 로고 / 식권 */}
+            <div className="flex items-center justify-between">
+              <img
+                src="/assets/maumpay-logo.svg"
+                alt="MaumPay"
+                className="w-auto"
+                style={{ height: 18 }}
+              />
+
+              {/* ✅ 텍스트 포함 티켓 */}
+              <TicketTag height={30} />
             </div>
 
-            {/* ✅ 식권: 네가 넣어둔 티켓 SVG 파일 사용 (파일명 다르면 여기만 수정) */}
-            <div className="absolute right-5 top-4">
-              <div className="relative">
-                <img src="/assets/ticket.svg" alt="식권" className="h-9 w-auto" />
-                {/* 텍스트는 필요하면 SVG 안에 넣고, 여기선 최소로 */}
-                <div
-                  className="absolute inset-0 flex items-center justify-center text-[13px] font-bold"
-                  style={{ color: "rgba(0,0,0,0.55)" }}
-                >
-                  식권
-                </div>
+            {/* 금액 + > */}
+            <div className="mt-3 flex items-center justify-end gap-[6px]">
+              <div className="text-[26px] font-extrabold text-[#2E2E2E]">
+                {formatWon(balance)}
               </div>
-            </div>
-
-            {/* 금액(우측) + ✅ 화살표 아이콘 */}
-            <div className="absolute right-6 top-[70px] flex items-center gap-2">
-              <div className="text-[40px] font-extrabold tracking-tight text-[#333]">{formatWon(balance)}</div>
-              <img src="/assets/chevron-right.svg" alt=">" className="h-6 w-6 opacity-60" />
+              <img
+                src="/assets/chevron-right.svg"
+                alt=""
+                aria-hidden
+                style={{ width: 14, height: 14, opacity: 0.7 }}
+              />
             </div>
 
             {/* 충전 | 송금 */}
-            <div className="absolute left-6 top-[116px] flex items-center gap-5 text-[18px] font-semibold text-[#6E6E6E]">
-              <button type="button" className="active:opacity-70">
-                충전
-              </button>
-              <span className="text-[#C8C8C8]">|</span>
-              <button type="button" className="active:opacity-70">
-                송금
-              </button>
+            <div className="mt-3 flex items-center justify-between">
+              <div className="flex items-center gap-4 text-[13px] font-semibold text-[#6E6E6E]">
+                <button type="button" className="active:opacity-70">
+                  충전
+                </button>
+                <span style={{ color: "rgba(0,0,0,0.25)" }}>|</span>
+                <button type="button" className="active:opacity-70">
+                  송금
+                </button>
+              </div>
             </div>
 
             {/* 노란 버튼 */}
             <button
               type="button"
               onClick={() => router.push("/scan")}
-              className="absolute left-1/2 -translate-x-1/2 active:opacity-80"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-[14px] font-bold text-[#111] active:opacity-80"
               style={{
-                width: 323, // ✅ 네가 준 값 그대로
                 height: 55,
-                left: 26, // figma absolute 기준이라, 가운데정렬 대신 정확한 값 적용
-                bottom: 12,
-                transform: "none",
                 background: "#FFDC82",
                 border: "2px solid #FFE08E",
-                borderRadius: 14,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-                boxSizing: "border-box",
               }}
             >
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/35">
-                ▦
-              </span>
-              <span className="text-[20px] font-extrabold text-[#333]">마음 전하기</span>
+              <img src="/assets/send-heart.svg" alt="" aria-hidden style={{ width: 18, height: 18 }} />
+              마음 전하기
             </button>
-          </section>
-
-          {/* 배너 */}
-          <section className="mt-5">
-            <div
-              className="relative overflow-hidden rounded-[22px] bg-white px-4 py-5 shadow-[0_18px_50px_rgba(0,0,0,0.10)]"
-              style={{ width: CONTENT_W, margin: "0 auto" }}
-            >
-              <div className="h-[70px] w-full rounded-[18px] bg-[#D6D6D6]" />
-              <div className="absolute bottom-5 right-6 text-[16px] font-semibold text-[#8A8A8A]">1/10</div>
-            </div>
-          </section>
-
-          {/* 아이콘 그리드 */}
-          <section className="mt-5">
-            <div
-              className="rounded-[22px] bg-white p-5 shadow-[0_18px_50px_rgba(0,0,0,0.10)]"
-              style={{ width: CONTENT_W, margin: "0 auto" }}
-            >
-              <div className="grid grid-cols-4 gap-x-6 gap-y-7">
-                {shortcuts.map((label) => (
-                  <button key={label} type="button" className="flex flex-col items-center gap-2 active:opacity-70">
-                    <div className="h-[56px] w-[56px] rounded-[16px] bg-[#D9D9D9]" />
-                    <div className="text-[13px] font-semibold text-[#6E6E6E]">{label}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* 하단 네비 */}
-          <div className="mt-8 flex justify-center pb-2">
-            <LiquidBottomNav active={activeTab} onChange={setActiveTab} />
           </div>
-        </div>
+        </section>
+
+        {/* 광고 배너 */}
+        <section className="mt-5">
+          <div
+            className="relative overflow-hidden rounded-[22px] bg-white"
+            style={{
+              height: 92,
+              boxShadow: "0 18px 50px rgba(0,0,0,0.10)",
+            }}
+          >
+            <div className="absolute bottom-3 right-4 text-xs font-semibold text-[#9A9A9A]">
+              1/10
+            </div>
+          </div>
+        </section>
+
+        {/* 아이콘 그리드 */}
+        <section className="mt-5">
+          <div className="rounded-[22px] bg-white p-5 shadow-[0_18px_50px_rgba(0,0,0,0.10)]">
+            <div className="grid grid-cols-4 gap-x-6 gap-y-6">
+              {shortcuts.map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  className="flex flex-col items-center gap-2 active:opacity-70 focus:outline-none focus-visible:outline-none"
+                >
+                  <div className="h-12 w-12 rounded-xl bg-[#D9D9D9]" />
+                  <div className="text-xs font-semibold text-[#7A7A7A]">{label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
       </div>
+
+      <LiquidTabBar active={activeTab} onChange={(idx) => setActiveTab(idx)} />
+
+      {/* ✅ 식권 인터랙션 (요란하지 않게 "발급" 느낌) */}
+      <style jsx global>{`
+        .ticket-issued {
+          transform-origin: 50% 50%;
+          animation: ticket-pop 420ms cubic-bezier(0.2, 0.85, 0.2, 1) both,
+            ticket-float 5.4s ease-in-out 900ms infinite;
+          will-change: transform;
+        }
+
+        @keyframes ticket-pop {
+          0% {
+            transform: translateY(2px) scale(0.985);
+            opacity: 0.9;
+          }
+          65% {
+            transform: translateY(-1px) scale(1.02);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(0px) scale(1);
+          }
+        }
+
+        @keyframes ticket-float {
+          0%,
+          100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-1px);
+          }
+        }
+
+        .ticket-shimmer {
+          opacity: 0;
+          background: linear-gradient(
+            110deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.32) 35%,
+            rgba(255, 255, 255, 0) 70%
+          );
+          transform: translateX(-40%);
+          animation: ticket-shimmer 900ms ease-out 220ms 1;
+          mix-blend-mode: soft-light;
+        }
+
+        @keyframes ticket-shimmer {
+          0% {
+            opacity: 0;
+            transform: translateX(-40%);
+          }
+          25% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+            transform: translateX(40%);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .ticket-issued,
+          .ticket-shimmer {
+            animation: none !important;
+          }
+        }
+      `}</style>
     </main>
   );
 }
