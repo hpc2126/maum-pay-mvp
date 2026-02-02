@@ -9,61 +9,7 @@ function formatWon(n: number) {
   return n.toLocaleString("ko-KR") + "원";
 }
 
-/** ✅ 식권 SVG path (그림자/테두리 없음) */
-function TicketSvg({ height = 30 }: { height?: number }) {
-  const w = (57 / 36) * height;
-  const d =
-    "M3 3H52V12C47.5556 13.8519 47.5556 20.1481 52 22V31H3V22C7.44444 20.1481 7.44444 13.8519 3 12V3Z";
-
-  return (
-    <svg
-      width={w}
-      height={height}
-      viewBox="0 0 57 36"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ display: "block" }}
-      aria-hidden
-    >
-      <path d={d} fill="#F7F3EA" />
-    </svg>
-  );
-}
-
-/** ✅ "식권" 태그: 텍스트를 티켓 안에 올림 + 미세 인터랙션 */
-function TicketTag({ height = 30 }: { height?: number }) {
-  const w = (57 / 36) * height;
-
-  return (
-    <div
-      className="ticket-issued relative"
-      style={{
-        width: w,
-        height,
-      }}
-      aria-label="식권"
-    >
-      <TicketSvg height={height} />
-      {/* 텍스트는 티켓 중앙 */}
-      <div
-        className="absolute inset-0 flex items-center justify-center"
-        style={{
-          fontSize: 12,
-          fontWeight: 700,
-          color: "#111",
-          letterSpacing: "-0.02em",
-        }}
-      >
-        식권
-      </div>
-
-      {/* 살짝 발급 느낌(샤인) */}
-      <span className="ticket-shimmer pointer-events-none absolute inset-0 rounded-[999px]" />
-    </div>
-  );
-}
-
-/** 하단 탭 아이콘(임시) */
+/** 하단 탭 아이콘(인라인 SVG) */
 function TabIcon({
   name,
   active,
@@ -78,7 +24,7 @@ function TabIcon({
   switch (name) {
     case "home":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} aria-hidden>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}>
           <path
             d="M3 11.5L12 4l9 7.5"
             stroke={stroke}
@@ -97,7 +43,7 @@ function TabIcon({
       );
     case "note":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} aria-hidden>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}>
           <path
             d="M7 3h10a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
             stroke={stroke}
@@ -114,8 +60,13 @@ function TabIcon({
       );
     case "mail":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} aria-hidden>
-          <path d="M4 6h16v12H4z" stroke={stroke} strokeWidth="2" strokeLinejoin="round" />
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}>
+          <path
+            d="M4 6h16v12H4z"
+            stroke={stroke}
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
           <path
             d="M4.5 6.5 12 12l7.5-5.5"
             stroke={stroke}
@@ -127,14 +78,24 @@ function TabIcon({
       );
     case "bag":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} aria-hidden>
-          <path d="M6 8h12l-1 13H7L6 8Z" stroke={stroke} strokeWidth="2" strokeLinejoin="round" />
-          <path d="M9 8a3 3 0 0 1 6 0" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}>
+          <path
+            d="M6 8h12l-1 13H7L6 8Z"
+            stroke={stroke}
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M9 8a3 3 0 0 1 6 0"
+            stroke={stroke}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
         </svg>
       );
     case "user":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} aria-hidden>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}>
           <path
             d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"
             stroke={stroke}
@@ -152,7 +113,7 @@ function TabIcon({
   }
 }
 
-/** ✅ LiquidTabBar (유지) */
+/** Liquid TabBar */
 function LiquidTabBar({
   active,
   onChange,
@@ -183,7 +144,7 @@ function LiquidTabBar({
     const s = shell.getBoundingClientRect();
     const b = btn.getBoundingClientRect();
 
-    const innerW = Math.max(78, Math.min(110, b.width * 0.78));
+    const innerW = Math.max(86, Math.min(118, b.width * 0.82));
     const center = b.left - s.left + b.width / 2;
 
     setPill({ left: center, width: innerW });
@@ -263,8 +224,11 @@ function LiquidTabBar({
                       }}
                       type="button"
                       onClick={() => onChange(idx)}
-                      className="relative flex flex-col items-center justify-center gap-[4px] active:opacity-70 focus:outline-none focus-visible:outline-none"
-                      style={{ paddingTop: 2, WebkitTapHighlightColor: "transparent" }}
+                      className="relative flex flex-col items-center justify-center gap-[4px] active:opacity-70"
+                      style={{
+                        paddingTop: 2,
+                        WebkitTapHighlightColor: "transparent",
+                      }}
                       aria-label={t.label}
                     >
                       <TabIcon name={t.icon} active={isActive} />
@@ -287,10 +251,36 @@ function LiquidTabBar({
 
           <div
             className="pointer-events-none absolute -inset-x-2 -inset-y-2 rounded-[34px]"
-            style={{ boxShadow: "0 16px 34px rgba(0,0,0,0.10)", opacity: 0.55 }}
+            style={{
+              boxShadow: "0 16px 34px rgba(0,0,0,0.10)",
+              opacity: 0.55,
+            }}
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+/** 식권 태그: ticket.svg + 내부 텍스트 */
+function TicketTag() {
+  return (
+    <div className="relative inline-flex items-center justify-center">
+      <img
+        src="/assets/ticket.svg"
+        alt="ticket"
+        className="block"
+        style={{
+          width: 56,
+          height: "auto",
+        }}
+      />
+      <span
+        className="absolute inset-0 flex items-center justify-center text-[12px] font-extrabold"
+        style={{ color: "#111", letterSpacing: "-0.02em" }}
+      >
+        식권
+      </span>
     </div>
   );
 }
@@ -323,85 +313,91 @@ export default function MainPage() {
         paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 110px)",
       }}
     >
-      <div className="px-5 pt-6">
+      <div className="px-5 pt-5">
         {/* ✅ 노란 메인 카드 */}
         <section>
           <div
-            className="rounded-[20px] p-5"
+            className="rounded-[20px]"
             style={{
               width: "100%",
               background:
-                "linear-gradient(0deg, #FFD158, #FFD158), linear-gradient(360deg, rgba(255,255,255,0.3) 53.3%, rgba(255,255,255,0.7) 100%)",
+                "linear-gradient(0deg, #FFD158, #FFD158), linear-gradient(360deg, rgba(255,255,255,0.30) 53.3%, rgba(255,255,255,0.70) 100%)",
               backdropFilter: "blur(2px)",
               WebkitBackdropFilter: "blur(2px)",
+              padding: 18,
             }}
           >
-            {/* 상단: 로고 / 식권 */}
-            <div className="flex items-center justify-between">
+            {/* 상단 로고 + 식권 */}
+            <div className="flex items-start justify-between">
               <img
                 src="/assets/maumpay-logo.svg"
                 alt="MaumPay"
-                className="w-auto"
-                style={{ height: 18 }}
+                style={{
+                  height: 18, /* ✅ 로고 1.3배 줄인 상태 유지 */
+                  width: "auto",
+                  display: "block",
+                }}
               />
-
-              {/* ✅ 텍스트 포함 티켓 */}
-              <TicketTag height={30} />
+              <div className="mt-[1px]">
+                <TicketTag />
+              </div>
             </div>
 
             {/* 금액 + > */}
-            <div className="mt-3 flex items-center justify-end gap-[6px]">
-              <div className="text-[26px] font-extrabold text-[#2E2E2E]">
+            <div className="mt-8 flex items-center justify-end gap-1">
+              <div className="text-[30px] font-extrabold text-[#1F1F1F]">
                 {formatWon(balance)}
               </div>
               <img
                 src="/assets/chevron-right.svg"
-                alt=""
-                aria-hidden
-                style={{ width: 14, height: 14, opacity: 0.7 }}
+                alt=">"
+                style={{ width: 16, height: 16, opacity: 0.65 }}
               />
             </div>
 
             {/* 충전 | 송금 */}
-            <div className="mt-3 flex items-center justify-between">
-              <div className="flex items-center gap-4 text-[13px] font-semibold text-[#6E6E6E]">
-                <button type="button" className="active:opacity-70">
-                  충전
-                </button>
-                <span style={{ color: "rgba(0,0,0,0.25)" }}>|</span>
-                <button type="button" className="active:opacity-70">
-                  송금
-                </button>
-              </div>
+            <div className="mt-4 flex items-center gap-4 text-[14px] font-semibold text-[#6F6F6F]">
+              <button type="button" className="active:opacity-70">
+                충전
+              </button>
+              <span style={{ opacity: 0.5 }}>|</span>
+              <button type="button" className="active:opacity-70">
+                송금
+              </button>
             </div>
 
-            {/* 노란 버튼 */}
+            {/* 마음 전하기 버튼 (✅ 카드 내부) */}
             <button
               type="button"
               onClick={() => router.push("/scan")}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-[14px] font-bold text-[#111] active:opacity-80"
+              className="mt-5 flex h-[55px] w-full items-center justify-center gap-2 rounded-[14px] active:opacity-80"
               style={{
-                height: 55,
                 background: "#FFDC82",
                 border: "2px solid #FFE08E",
               }}
             >
-              <img src="/assets/send-heart.svg" alt="" aria-hidden style={{ width: 18, height: 18 }} />
-              마음 전하기
+              <img
+                src="/assets/send-heart.svg"
+                alt=""
+                style={{ width: 18, height: 18, display: "block" }}
+              />
+              <span className="text-[16px] font-bold text-[#111]">
+                마음 전하기
+              </span>
             </button>
           </div>
         </section>
 
-        {/* 광고 배너 */}
+        {/* ✅ 배너: 흰 카드만 (안쪽 회색 박스 제거) */}
         <section className="mt-5">
           <div
             className="relative overflow-hidden rounded-[22px] bg-white"
             style={{
-              height: 92,
-              boxShadow: "0 18px 50px rgba(0,0,0,0.10)",
+              height: 90, /* 필요하면 더 낮춰도 됨 */
+              boxShadow: "0 18px 50px rgba(0,0,0,0.08)",
             }}
           >
-            <div className="absolute bottom-3 right-4 text-xs font-semibold text-[#9A9A9A]">
+            <div className="absolute bottom-4 right-5 text-sm font-semibold text-[#A0A0A0]">
               1/10
             </div>
           </div>
@@ -415,10 +411,12 @@ export default function MainPage() {
                 <button
                   key={label}
                   type="button"
-                  className="flex flex-col items-center gap-2 active:opacity-70 focus:outline-none focus-visible:outline-none"
+                  className="flex flex-col items-center gap-2 active:opacity-70"
                 >
                   <div className="h-12 w-12 rounded-xl bg-[#D9D9D9]" />
-                  <div className="text-xs font-semibold text-[#7A7A7A]">{label}</div>
+                  <div className="text-xs font-semibold text-[#7A7A7A]">
+                    {label}
+                  </div>
                 </button>
               ))}
             </div>
@@ -426,75 +424,7 @@ export default function MainPage() {
         </section>
       </div>
 
-      <LiquidTabBar active={activeTab} onChange={(idx) => setActiveTab(idx)} />
-
-      {/* ✅ 식권 인터랙션 (요란하지 않게 "발급" 느낌) */}
-      <style jsx global>{`
-        .ticket-issued {
-          transform-origin: 50% 50%;
-          animation: ticket-pop 420ms cubic-bezier(0.2, 0.85, 0.2, 1) both,
-            ticket-float 5.4s ease-in-out 900ms infinite;
-          will-change: transform;
-        }
-
-        @keyframes ticket-pop {
-          0% {
-            transform: translateY(2px) scale(0.985);
-            opacity: 0.9;
-          }
-          65% {
-            transform: translateY(-1px) scale(1.02);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(0px) scale(1);
-          }
-        }
-
-        @keyframes ticket-float {
-          0%,
-          100% {
-            transform: translateY(0px);
-          }
-          50% {
-            transform: translateY(-1px);
-          }
-        }
-
-        .ticket-shimmer {
-          opacity: 0;
-          background: linear-gradient(
-            110deg,
-            rgba(255, 255, 255, 0) 0%,
-            rgba(255, 255, 255, 0.32) 35%,
-            rgba(255, 255, 255, 0) 70%
-          );
-          transform: translateX(-40%);
-          animation: ticket-shimmer 900ms ease-out 220ms 1;
-          mix-blend-mode: soft-light;
-        }
-
-        @keyframes ticket-shimmer {
-          0% {
-            opacity: 0;
-            transform: translateX(-40%);
-          }
-          25% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 0;
-            transform: translateX(40%);
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .ticket-issued,
-          .ticket-shimmer {
-            animation: none !important;
-          }
-        }
-      `}</style>
+      <LiquidTabBar active={activeTab} onChange={setActiveTab} />
     </main>
   );
 }
