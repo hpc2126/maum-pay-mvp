@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import LiquidTabBar from "@/components/LiquidTabBar";
+import LiquidTabBar from "../components/LiquidTabBar";
 
 const BG = "#E9E9E9";
 
