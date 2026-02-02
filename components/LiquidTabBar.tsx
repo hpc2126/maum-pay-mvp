@@ -1,3 +1,4 @@
+// components/LiquidTabBar.tsx
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -10,13 +11,12 @@ function TabIcon({
   active?: boolean;
 }) {
   const stroke = active ? "#111" : "rgba(0,0,0,0.45)";
-  const fill = "none";
   const size = 20;
 
   switch (name) {
     case "home":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
           <path
             d="M3 11.5L12 4l9 7.5"
             stroke={stroke}
@@ -35,7 +35,7 @@ function TabIcon({
       );
     case "note":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
           <path
             d="M7 3h10a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
             stroke={stroke}
@@ -52,7 +52,7 @@ function TabIcon({
       );
     case "mail":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
           <path
             d="M4 6h16v12H4z"
             stroke={stroke}
@@ -70,7 +70,7 @@ function TabIcon({
       );
     case "bag":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
           <path
             d="M6 8h12l-1 13H7L6 8Z"
             stroke={stroke}
@@ -87,7 +87,7 @@ function TabIcon({
       );
     case "user":
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill}>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
           <path
             d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"
             stroke={stroke}
@@ -135,10 +135,11 @@ export default function LiquidTabBar({
     const s = shell.getBoundingClientRect();
     const b = btn.getBoundingClientRect();
 
-    const innerW = Math.max(78, Math.min(110, b.width * 0.78));
     const center = b.left - s.left + b.width / 2;
+    // ✅ pill은 각 탭 칸 폭의 ~72% 정도가 가장 안정적 (너가 원한 figma 느낌)
+    const w = Math.max(86, Math.min(110, b.width * 0.72));
 
-    setPill({ left: center, width: innerW });
+    setPill({ left: center, width: w });
   };
 
   useLayoutEffect(() => {
@@ -154,98 +155,126 @@ export default function LiquidTabBar({
   }, [active]);
 
   return (
-    <div className="fixed left-0 right-0 bottom-0 z-50 flex justify-center">
-      <div
-        className="w-full max-w-md px-5"
-        style={{
-          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
-        }}
-      >
-        <div className="relative">
+    <div
+      style={{
+        position: "fixed",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 50,
+        display: "flex",
+        justifyContent: "center",
+        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)",
+      }}
+    >
+      {/* ✅ 페이지 폭과 동일하게 */}
+      <div style={{ width: "100%", maxWidth: 448, paddingLeft: 20, paddingRight: 20 }}>
+        <div
+          ref={shellRef}
+          style={{
+            height: 61,
+            borderRadius: 30.5,
+            background: "rgba(255,255,255,0.20)",
+            backdropFilter: "blur(18px)",
+            WebkitBackdropFilter: "blur(18px)",
+            boxShadow: "0 2px 20px rgba(0,0,0,0.10)",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
           <div
-            ref={shellRef}
-            className="relative overflow-hidden rounded-[30.5px]"
             style={{
-              height: 61,
-              background: "rgba(255,255,255,0.20)",
-              backdropFilter: "blur(18px)",
-              WebkitBackdropFilter: "blur(18px)",
-              boxShadow: "0 2px 20px rgba(0,0,0,0.10)",
-            }}
-          >
-            <div
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.08) 100%)",
-                opacity: 0.35,
-              }}
-            />
-            <div
-              className="pointer-events-none absolute inset-0"
-              style={{
-                border: "1px solid rgba(255,255,255,0.35)",
-                borderRadius: 30.5,
-              }}
-            />
-
-            {pill && (
-              <div
-                className="pointer-events-none absolute top-[4px] rounded-[26.5px] transition-[left,width] duration-200 ease-out"
-                style={{
-                  left: pill.left,
-                  width: pill.width,
-                  height: 53,
-                  transform: "translateX(-50%)",
-                  background: "#EDEDED",
-                  boxShadow: "0 6px 14px rgba(0,0,0,0.08)",
-                }}
-              />
-            )}
-
-            <div className="relative h-full px-[14px]">
-              <div className="grid h-full grid-cols-5">
-                {tabs.map((t, idx) => {
-                  const isActive = idx === active;
-                  return (
-                    <button
-                      key={t.key}
-                      ref={(el) => {
-                        btnRefs.current[idx] = el;
-                      }}
-                      type="button"
-                      onClick={() => onChange(idx)}
-                      className="relative flex flex-col items-center justify-center gap-[4px]
-                                 active:opacity-70 focus:outline-none focus-visible:outline-none"
-                      style={{ paddingTop: 2 }}
-                      aria-label={t.label}
-                    >
-                      <TabIcon name={t.icon} active={isActive} />
-                      <span
-                        className="text-[12px] font-semibold"
-                        style={{
-                          color: isActive ? "#111" : "rgba(0,0,0,0.55)",
-                          letterSpacing: "-0.01em",
-                          lineHeight: 1,
-                        }}
-                      >
-                        {t.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="pointer-events-none absolute -inset-x-2 -inset-y-2 rounded-[34px]"
-            style={{
-              boxShadow: "0 16px 34px rgba(0,0,0,0.10)",
-              opacity: 0.55,
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.08) 100%)",
+              opacity: 0.35,
+              pointerEvents: "none",
             }}
           />
+
+          {/* ✅ pill */}
+          {pill && (
+            <div
+              style={{
+                position: "absolute",
+                top: 4,
+                height: 53,
+                left: pill.left,
+                width: pill.width,
+                transform: "translateX(-50%)",
+                borderRadius: 26.5,
+                background: "#EDEDED",
+                boxShadow: "0 6px 14px rgba(0,0,0,0.08)",
+                transition: "left 200ms ease, width 200ms ease",
+                pointerEvents: "none",
+              }}
+            />
+          )}
+
+          <div
+            style={{
+              height: "100%",
+              display: "grid",
+              gridTemplateColumns: "repeat(5, 1fr)",
+              paddingLeft: 14,
+              paddingRight: 14,
+              position: "relative",
+            }}
+          >
+            {tabs.map((t, idx) => {
+              const isActive = idx === active;
+              return (
+                <button
+                  key={t.key}
+                  ref={(el) => {
+                    btnRefs.current[idx] = el;
+                  }}
+                  type="button"
+                  onClick={() => onChange(idx)}
+                  style={{
+                    border: 0,
+                    background: "transparent",
+                    padding: 0,
+                    margin: 0,
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 4,
+                    userSelect: "none",
+                  }}
+                >
+                  <TabIcon name={t.icon} active={isActive} />
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: isActive ? "#111" : "rgba(0,0,0,0.55)",
+                      letterSpacing: "-0.01em",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {t.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {/* outer subtle shadow */}
+        <div
+          style={{
+            pointerEvents: "none",
+            marginTop: -61,
+            height: 61,
+            borderRadius: 30.5,
+            boxShadow: "0 16px 34px rgba(0,0,0,0.10)",
+            opacity: 0.55,
+          }}
+        />
       </div>
     </div>
   );

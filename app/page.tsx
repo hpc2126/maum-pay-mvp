@@ -4,6 +4,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import LiquidTabBar from "../components/LiquidTabBar";
+import TicketTag from "../components/TicketTag";
 
 const BG = "#E9E9E9";
 
@@ -11,56 +12,9 @@ function formatWon(n: number) {
   return n.toLocaleString("ko-KR") + "원";
 }
 
-function TicketTag() {
-  // ✅ 1.5배 정도 크게, 벡터라 화질 안 깨짐(정수 px로)
-  const W = 86;
-  const H = 54;
-
-  return (
-    <div
-      className="relative"
-      style={{
-        width: W,
-        height: H,
-        display: "grid",
-        placeItems: "center",
-      }}
-    >
-      <img
-        src="/assets/ticket.svg"
-        alt="식권"
-        width={W}
-        height={H}
-        style={{
-          display: "block",
-          width: W,
-          height: H,
-        }}
-      />
-      <span
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "grid",
-          placeItems: "center",
-          fontSize: 16,
-          fontWeight: 800,
-          color: "#111",
-          letterSpacing: "-0.02em",
-          transform: "translateY(-1px)",
-          pointerEvents: "none",
-        }}
-      >
-        식권
-      </span>
-    </div>
-  );
-}
-
 export default function MainPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState(0);
-
   const balance = 300_000;
 
   const shortcuts = useMemo(
@@ -85,13 +39,7 @@ export default function MainPage() {
         paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 110px)",
       }}
     >
-      <div
-        style={{
-          paddingLeft: 20,
-          paddingRight: 20,
-          paddingTop: 14, // ✅ 상단 멀지 않게
-        }}
-      >
+      <div style={{ paddingLeft: 20, paddingRight: 20, paddingTop: 8 }}>
         {/* 노란 메인 카드 */}
         <section>
           <div
@@ -102,10 +50,10 @@ export default function MainPage() {
                 "linear-gradient(0deg, #FFD158, #FFD158), linear-gradient(360deg, rgba(255, 255, 255, 0.3) 53.3%, rgba(255, 255, 255, 0.7) 100%)",
               backdropFilter: "blur(2px)",
               WebkitBackdropFilter: "blur(2px)",
-              padding: 18, // ✅ 상단 패딩 줄임
+              padding: 14, // ✅ 상단 패딩 더 좁게
             }}
           >
-            {/* 로고 + 식권 (상단 패딩/높이 정렬) */}
+            {/* 로고 + 식권 */}
             <div
               style={{
                 display: "flex",
@@ -114,13 +62,14 @@ export default function MainPage() {
               }}
             >
               <img
-                src="/assets/maumpay-logo.svg" // ✅ 새 로고 사용
+                src="/assets/maumpay-logo.svg"
                 alt="MaumPay"
                 style={{
-                  height: 22, // ✅ 로고 1.3배 줄인 상태(이전보다 작게)
+                  height: 22,
                   width: "auto",
                   display: "block",
                 }}
+                draggable={false}
               />
               <TicketTag />
             </div>
@@ -128,11 +77,11 @@ export default function MainPage() {
             {/* 금액 + > */}
             <div
               style={{
-                marginTop: 14,
+                marginTop: 12,
                 display: "flex",
                 justifyContent: "flex-end",
                 alignItems: "center",
-                gap: 8, // ✅ 금액이랑 > 사이 너무 벌어진 거 줄임
+                gap: 8,
               }}
             >
               <div
@@ -151,6 +100,7 @@ export default function MainPage() {
                 width={18}
                 height={18}
                 style={{ opacity: 0.7, marginTop: 2 }}
+                draggable={false}
               />
             </div>
 
@@ -160,45 +110,27 @@ export default function MainPage() {
                 marginTop: 10,
                 display: "flex",
                 alignItems: "center",
-                gap: 16, // ✅ 너무 벌어짐 줄임
+                gap: 14,
                 color: "rgba(0,0,0,0.45)",
-                fontWeight: 700,
-                fontSize: 16, // ✅ “아주 살짝” 키움
+                fontWeight: 750,
+                fontSize: 16,
               }}
             >
-              <button
-                type="button"
-                style={{
-                  background: "transparent",
-                  border: 0,
-                  padding: 0,
-                  color: "rgba(0,0,0,0.45)",
-                  font: "inherit",
-                }}
-              >
+              <button type="button" style={{ border: 0, background: "transparent", padding: 0, font: "inherit", color: "inherit" }}>
                 충전
               </button>
               <span style={{ opacity: 0.35 }}>|</span>
-              <button
-                type="button"
-                style={{
-                  background: "transparent",
-                  border: 0,
-                  padding: 0,
-                  color: "rgba(0,0,0,0.45)",
-                  font: "inherit",
-                }}
-              >
+              <button type="button" style={{ border: 0, background: "transparent", padding: 0, font: "inherit", color: "inherit" }}>
                 송금
               </button>
             </div>
 
-            {/* 마음 전하기 버튼 (카드 안으로 확실히) */}
+            {/* 마음 전하기 버튼 */}
             <button
               type="button"
               onClick={() => router.push("/scan")}
               style={{
-                marginTop: 14,
+                marginTop: 12,
                 width: "100%",
                 height: 55,
                 borderRadius: 14,
@@ -213,25 +145,19 @@ export default function MainPage() {
                 color: "#222",
               }}
             >
-              <img
-                src="/assets/send-heart.svg"
-                alt=""
-                width={22}
-                height={22}
-                style={{ display: "block" }}
-              />
+              <img src="/assets/send-heart.svg" alt="" width={22} height={22} draggable={false} />
               마음 전하기
             </button>
           </div>
         </section>
 
-        {/* 배너: 단일 카드(안쪽 회색 박스 제거 유지) */}
-        <section style={{ marginTop: 18 }}>
+        {/* 배너: 단일 카드 */}
+        <section style={{ marginTop: 16 }}>
           <div
             style={{
               borderRadius: 22,
               background: "#fff",
-              height: 110, // 필요하면 더 낮춰도 됨
+              height: 106,
               boxShadow: "0 18px 50px rgba(0,0,0,0.10)",
               position: "relative",
             }}
@@ -252,7 +178,7 @@ export default function MainPage() {
         </section>
 
         {/* 그리드 카드 */}
-        <section style={{ marginTop: 18 }}>
+        <section style={{ marginTop: 16 }}>
           <div
             style={{
               borderRadius: 22,
